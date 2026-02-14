@@ -88,6 +88,14 @@
     <div id="main-view">
         <h1>Mission Control</h1>
         <div class="status">SECURE CONNECTION ESTABLISHED</div>
+        
+        <!-- Omni-Input -->
+        <div style="margin-bottom: 20px; text-align: center;">
+            <input type="text" id="omni-input" placeholder="Enter Request (e.g. 'My knee hurts' or 'Fix sink')" 
+                   style="width: 100%; padding: 15px; background: #111; border: 1px solid var(--neon); color: white; border-radius: 4px; font-family: monospace; box-sizing: border-box;">
+            <button onclick="smartRoute()" style="width: 100%; margin-top: 10px; background: var(--neon); border: none; padding: 10px; font-weight: bold; cursor: pointer;">AUTO-ROUTE</button>
+        </div>
+
         <div id="grid" class="grid"></div>
     </div>
 
@@ -141,6 +149,42 @@
             `;
             grid.appendChild(card);
         });
+
+        async function smartRoute() {
+            const input = document.getElementById('omni-input').value;
+            if (!input) return;
+            
+            // Simple keyword routing for V1 (Fast & Local)
+            const map = {
+                'hurt': 'doctor', 'pain': 'doctor', 'sick': 'doctor', 'health': 'doctor',
+                'dog': 'vet', 'cat': 'vet', 'pet': 'vet', 'animal': 'vet',
+                'leak': 'plumber', 'water': 'plumber', 'pipe': 'plumber',
+                'wire': 'electrician', 'power': 'electrician', 'light': 'electrician',
+                'build': 'mason', 'wood': 'carpenter',
+                'money': 'revenueofficer', 'cash': 'revenueofficer',
+                'stock': 'trendspotter', 'market': 'trendspotter',
+                'sad': 'mentalhealth', 'depressed': 'mentalhealth', 'stress': 'mentalhealth'
+            };
+
+            let targetId = 'organizer'; // Default fallback
+            
+            // Find best match
+            for (const [key, agent] of Object.entries(map)) {
+                if (input.toLowerCase().includes(key)) {
+                    targetId = agent;
+                    break;
+                }
+            }
+
+            // Open chat with context
+            openChat(targetId.toUpperCase(), targetId);
+            
+            // Auto-send the initial message
+            setTimeout(() => {
+                document.getElementById('chat-input').value = input;
+                sendMessage();
+            }, 500);
+        }
 
         function openDetail(squad) {
             document.getElementById('main-view').style.display = 'none';
