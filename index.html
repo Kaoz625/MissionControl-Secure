@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="theme-color" content="#000000">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <title>Mission Control</title>
+    <style>
+        :root { --neon: #00ff41; --dark: #050505; --panel: #111; --text: #ddd; }
+        body { background-color: var(--dark); color: var(--text); font-family: 'Courier New', monospace; margin: 0; padding: 20px; -webkit-tap-highlight-color: transparent; }
+        
+        /* Glitch Header */
+        h1 { 
+            text-align: center; color: var(--neon); margin-bottom: 5px; font-weight: 900; 
+            letter-spacing: 2px; font-size: 22px; text-transform: uppercase; 
+            text-shadow: 0 0 5px var(--neon);
+            border-bottom: 1px solid #333; padding-bottom: 15px;
+        }
+        .status { text-align: center; font-size: 10px; color: var(--neon); margin-bottom: 30px; letter-spacing: 1px; animation: pulse 2s infinite; }
+        
+        @keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.5; } 100% { opacity: 1; } }
+
+        /* Grid */
+        .grid { display: grid; grid-template-columns: 1fr; gap: 15px; padding-bottom: 80px; }
+        
+        /* Cards */
+        .squad-card { 
+            background: var(--panel); 
+            border-left: 4px solid #333; 
+            border-radius: 4px; 
+            padding: 15px; 
+            position: relative;
+            transition: all 0.2s ease;
+        }
+        .squad-card:active { background: #1a1a1a; border-left-color: var(--neon); }
+        
+        .squad-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 5px; }
+        .squad-name { color: #fff; font-size: 16px; font-weight: bold; text-transform: uppercase; }
+        .squad-icon { font-size: 18px; }
+        .squad-desc { font-size: 11px; color: #666; }
+        
+        .agent-count { font-size: 10px; color: #444; margin-top: 8px; text-align: right; }
+
+        /* Detail View (Overlay) */
+        #detail-view { 
+            display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; 
+            background: var(--dark); padding: 20px; box-sizing: border-box; 
+            overflow-y: auto; z-index: 999; 
+        }
+        .back-btn { 
+            background: #1a1a1a; color: var(--neon); border: 1px solid #333; 
+            padding: 15px; border-radius: 4px; font-weight: bold; margin-bottom: 30px; 
+            text-align: center; cursor: pointer; text-transform: uppercase; font-size: 12px; letter-spacing: 1px;
+        }
+        
+        .agent-row { 
+            border-bottom: 1px solid #222; padding: 15px 0; 
+            display: flex; justify-content: space-between; align-items: center; 
+        }
+        .agent-info { flex: 1; }
+        .agent-name { font-weight: bold; color: #fff; display: block; font-size: 15px; }
+        .agent-role { font-size: 11px; color: #666; margin-top: 4px; display: block; }
+        .status-dot { display: inline-block; width: 6px; height: 6px; background: var(--neon); border-radius: 50%; margin-right: 8px; box-shadow: 0 0 4px var(--neon); }
+        
+        .chat-btn { 
+            background: transparent; border: 1px solid var(--neon); color: var(--neon); 
+            padding: 6px 12px; border-radius: 2px; font-size: 10px; font-weight: bold; letter-spacing: 1px;
+        }
+        .chat-btn:active { background: var(--neon); color: #000; }
+
+    </style>
+</head>
+<body>
+
+    <div id="main-view">
+        <h1>Mission Control</h1>
+        <div class="status">SECURE CONNECTION ESTABLISHED</div>
+        <div id="grid" class="grid"></div>
+    </div>
+
+    <div id="detail-view">
+        <div class="back-btn" onclick="closeDetail()">[ Return to Base ]</div>
+        <h2 id="detail-title" style="color: #fff; font-size: 20px; border-bottom: 1px solid #333; padding-bottom: 10px; margin-bottom: 20px;"></h2>
+        <div id="detail-list"></div>
+    </div>
+
+    <script>
+        const SQUADS = [
+            { id: 'life', name: 'LIFE OPS', icon: '🏥', desc: 'Health, Home & Logistics', agents: [ {n:'Doctor',r:'Medical Diagnostics'}, {n:'Vet',r:'Catahoula Specialist'}, {n:'Chef',r:'Nutrition & Fuel'}, {n:'Mental Health',r:'Psychology'}, {n:'Organizer',r:'Logistics'} ] },
+            { id: 'trades', name: 'TRADES', icon: '🏗️', desc: 'Physical Construction', agents: [ {n:'Mason',r:'Stone & Brick'}, {n:'Electrician',r:'High Voltage'}, {n:'Plumber',r:'Systems'}, {n:'Mechanic',r:'Transport'}, {n:'Welder',r:'Fabrication'} ] },
+            { id: 'cyber', name: 'CYBER', icon: '💻', desc: 'Digital Dominance', agents: [ {n:'Black Hat',r:'Offense/Intel'}, {n:'Cyber Sec',r:'Defense'}, {n:'Coder',r:'Automation'}, {n:'AI Specialist',r:'Intelligence'} ] },
+            { id: 'wealth', name: 'WEALTH', icon: '💰', desc: 'Empire Building', agents: [ {n:'Revenue Officer',r:'Cash Flow'}, {n:'Realtor',r:'Assets'}, {n:'Legal Eagle',r:'Defense'}, {n:'Trend Spotter',r:'Market Opportunities'} ] },
+            { id: 'mystic', name: 'MYSTIC', icon: '🔮', desc: 'Esoteric Knowledge', agents: [ {n:'Tarot Reader',r:'Pathfinding'}, {n:'Energy Control',r:'Vibration'}, {n:'Astrologer',r:'Cosmic Alignment'} ] },
+            { id: 'nature', name: 'NATURE', icon: '🌿', desc: 'Survival & Origin', agents: [ {n:'Survivalist',r:'Off-Grid'}, {n:'Farmer',r:'Sustenance'}, {n:'Energy Eng',r:'Free Power'} ] },
+            { id: 'social', name: 'INFLUENCE', icon: '🥂', desc: 'Social Engineering', agents: [ {n:'Social Mogul',r:'Fame'}, {n:'Creative Dir',r:'Visuals'}, {n:'Relationship',r:'Dynamics'} ] },
+            { id: 'intel', name: 'INTEL', icon: '🎓', desc: 'Deep Research', agents: [ {n:'Private Eye',r:'Investigation'}, {n:'Researcher',r:'Data Mining'}, {n:'Test Ace',r:'Accreditation'} ] }
+        ];
+
+        const grid = document.getElementById('grid');
+        
+        SQUADS.forEach(squad => {
+            const card = document.createElement('div');
+            card.className = 'squad-card';
+            card.onclick = () => openDetail(squad);
+            card.innerHTML = `
+                <div class="squad-header">
+                    <span class="squad-name">${squad.name}</span>
+                    <span class="squad-icon">${squad.icon}</span>
+                </div>
+                <div class="squad-desc">${squad.desc}</div>
+                <div class="agent-count">/// ${squad.agents.length} AGENTS ACTIVE</div>
+            `;
+            grid.appendChild(card);
+        });
+
+        function openDetail(squad) {
+            document.getElementById('main-view').style.display = 'none';
+            document.getElementById('detail-view').style.display = 'block';
+            document.getElementById('detail-title').innerHTML = `${squad.icon} ${squad.name}`;
+            
+            const list = document.getElementById('detail-list');
+            list.innerHTML = '';
+            squad.agents.forEach(agent => {
+                const row = document.createElement('div');
+                row.className = 'agent-row';
+                row.innerHTML = `
+                    <div class="agent-info">
+                        <span class="agent-name"><span class="status-dot"></span>${agent.n}</span>
+                        <span class="agent-role">${agent.r}</span>
+                    </div>
+                    <button class="chat-btn" onclick="alert('Establishing secure link to ${agent.n}...')">LINK</button>
+                `;
+                list.appendChild(row);
+            });
+        }
+
+        function closeDetail() {
+            document.getElementById('main-view').style.display = 'block';
+            document.getElementById('detail-view').style.display = 'none';
+        }
+    </script>
+
+</body>
+</html>
