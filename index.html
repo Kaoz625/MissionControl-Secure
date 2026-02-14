@@ -70,6 +70,17 @@
         }
         .chat-btn:active { background: var(--neon); color: #000; }
 
+        /* Chat Overlay */
+        #chat-interface { display: none; position: fixed; bottom: 0; left: 0; width: 100%; height: 70%; background: #111; border-top: 2px solid var(--neon); padding: 20px; box-sizing: border-box; z-index: 2000; box-shadow: 0 -5px 20px rgba(0,0,0,0.8); transition: transform 0.3s ease; }
+        .chat-header { color: var(--neon); font-weight: bold; border-bottom: 1px solid #333; padding-bottom: 10px; margin-bottom: 10px; display: flex; justify-content: space-between; }
+        #chat-log { height: calc(100% - 100px); overflow-y: auto; margin-bottom: 10px; color: #ccc; font-size: 13px; line-height: 1.4; }
+        .chat-input-area { display: flex; gap: 10px; }
+        #chat-input { flex: 1; background: #222; border: 1px solid #444; color: white; padding: 10px; border-radius: 4px; font-family: monospace; }
+        #send-btn { background: var(--neon); color: black; border: none; padding: 10px 20px; font-weight: bold; border-radius: 4px; }
+        
+        .msg-user { color: #58a6ff; margin-bottom: 5px; text-align: right; }
+        .msg-agent { color: var(--neon); margin-bottom: 10px; }
+        .close-chat { color: #666; cursor: pointer; }
     </style>
 </head>
 <body>
@@ -86,7 +97,23 @@
         <div id="detail-list"></div>
     </div>
 
+    <div id="chat-interface">
+        <div class="chat-header">
+            <span id="chat-agent-name">AGENT</span>
+            <span class="close-chat" onclick="closeChat()">[X]</span>
+        </div>
+        <div id="chat-log"></div>
+        <div class="chat-input-area">
+            <input type="text" id="chat-input" placeholder="Enter command..." />
+            <button id="send-btn" onclick="sendMessage()">SEND</button>
+        </div>
+    </div>
+
     <script>
+        const API_URL = "https://spicy-signs-double.loca.lt";
+        const API_KEY = "mission-control-alpha";
+        let currentAgentId = null;
+
         const SQUADS = [
             { id: 'life', name: 'LIFE OPS', icon: '🏥', desc: 'Health, Home & Logistics', agents: [ {n:'Doctor',r:'Medical Diagnostics'}, {n:'Vet',r:'Catahoula Specialist'}, {n:'Chef',r:'Nutrition & Fuel'}, {n:'Mental Health',r:'Psychology'}, {n:'Organizer',r:'Logistics'} ] },
             { id: 'trades', name: 'TRADES', icon: '🏗️', desc: 'Physical Construction', agents: [ {n:'Mason',r:'Stone & Brick'}, {n:'Electrician',r:'High Voltage'}, {n:'Plumber',r:'Systems'}, {n:'Mechanic',r:'Transport'}, {n:'Welder',r:'Fabrication'} ] },
@@ -130,7 +157,7 @@
                         <span class="agent-name"><span class="status-dot"></span>${agent.n}</span>
                         <span class="agent-role">${agent.r}</span>
                     </div>
-                    <button class="chat-btn" onclick="alert('Establishing secure link to ${agent.n}...')">LINK</button>
+                    <button class="chat-btn" onclick="openChat('${agent.n.toUpperCase()}', '${agent.n.toLowerCase().replace(/ /g, '')}')">LINK</button>
                 `;
                 list.appendChild(row);
             });
@@ -139,6 +166,40 @@
         function closeDetail() {
             document.getElementById('main-view').style.display = 'block';
             document.getElementById('detail-view').style.display = 'none';
+        }
+
+        function openChat(name, id) {
+            currentAgentId = id;
+            document.getElementById('chat-agent-name').innerText = name + " // ONLINE";
+            document.getElementById('chat-interface').style.display = 'block';
+            document.getElementById('chat-log').innerHTML = '<div class="msg-agent">Connection established. Awaiting orders.</div>';
+        }
+
+        function closeChat() {
+            document.getElementById('chat-interface').style.display = 'none';
+        }
+
+        async function sendMessage() {
+            const input = document.getElementById('chat-input');
+            const msg = input.value;
+            if (!msg) return;
+
+            const log = document.getElementById('chat-log');
+            log.innerHTML += `<div class="msg-user">>> ${msg}</div>`;
+            input.value = '';
+
+            try {
+                const res = await fetch(`${API_URL}/chat`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ key: API_KEY, agentId: currentAgentId, message: msg })
+                });
+                const data = await res.json();
+                log.innerHTML += `<div class="msg-agent">${data.reply}</div>`;
+                log.scrollTop = log.scrollHeight;
+            } catch (e) {
+                log.innerHTML += `<div class="msg-agent" style="color:red">CONNECTION ERROR</div>`;
+            }
         }
     </script>
 
