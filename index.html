@@ -233,14 +233,34 @@
             input.value = '';
 
             try {
-                const res = await fetch(`${API_URL}/chat`, {
+                const response = await fetch(`${API_URL}/chat`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ key: API_KEY, agentId: currentAgentId, message: msg })
                 });
-                const data = await res.json();
-                log.innerHTML += `<div class="msg-agent">${data.reply}</div>`;
-                log.scrollTop = log.scrollHeight;
+
+                const reader = response.body.getReader();
+                const decoder = new TextDecoder();
+
+                while (true) {
+                    const { done, value } = await reader.read();
+                    if (done) break;
+                    
+                    const chunk = decoder.decode(value);
+                    const lines = chunk.split('\n\n');
+                    
+                    lines.forEach(line => {
+                        if (line.startsWith('data: ')) {
+                            const json = JSON.parse(line.substring(6));
+                            if (json.type === 'log') {
+                                log.innerHTML += `<div class="msg-agent" style="color: #888; font-size: 10px;">${json.content}</div>`;
+                            } else if (json.type === 'done') {
+                                log.innerHTML += `<div class="msg-agent" style="color: var(--neon);">[COMPLETE]</div>`;
+                            }
+                        }
+                    });
+                    log.scrollTop = log.scrollHeight;
+                }
             } catch (e) {
                 log.innerHTML += `<div class="msg-agent" style="color:red">CONNECTION ERROR</div>`;
             }
