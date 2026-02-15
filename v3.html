@@ -1,0 +1,298 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="theme-color" content="#000000">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <title>Mission Control</title>
+    <style>
+        :root { --neon: #00ff41; --dark: #050505; --panel: #111; --text: #ddd; }
+        body { background-color: var(--dark); color: var(--text); font-family: 'Courier New', monospace; margin: 0; padding: 20px; -webkit-tap-highlight-color: transparent; }
+        
+        /* Glitch Header */
+        h1 { 
+            text-align: center; color: var(--neon); margin-bottom: 5px; font-weight: 900; 
+            letter-spacing: 2px; font-size: 22px; text-transform: uppercase; 
+            text-shadow: 0 0 5px var(--neon);
+            border-bottom: 1px solid #333; padding-bottom: 15px;
+        }
+        .status { text-align: center; font-size: 10px; color: var(--neon); margin-bottom: 30px; letter-spacing: 1px; animation: pulse 2s infinite; }
+        
+        @keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.5; } 100% { opacity: 1; } }
+
+        /* Grid */
+        .grid { display: grid; grid-template-columns: 1fr; gap: 15px; padding-bottom: 80px; }
+        
+        /* Cards */
+        .squad-card { 
+            background: var(--panel); 
+            border-left: 4px solid #333; 
+            border-radius: 4px; 
+            padding: 15px; 
+            position: relative;
+            transition: all 0.2s ease;
+        }
+        .squad-card:active { background: #1a1a1a; border-left-color: var(--neon); }
+        
+        .squad-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 5px; }
+        .squad-name { color: #fff; font-size: 16px; font-weight: bold; text-transform: uppercase; }
+        .squad-icon { font-size: 18px; }
+        .squad-desc { font-size: 11px; color: #666; }
+        
+        .agent-count { font-size: 10px; color: #444; margin-top: 8px; text-align: right; }
+
+        /* Detail View (Overlay) */
+        #detail-view { 
+            display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; 
+            background: var(--dark); padding: 20px; box-sizing: border-box; 
+            overflow-y: auto; z-index: 999; 
+        }
+        .back-btn { 
+            background: #1a1a1a; color: var(--neon); border: 1px solid #333; 
+            padding: 15px; border-radius: 4px; font-weight: bold; margin-bottom: 30px; 
+            text-align: center; cursor: pointer; text-transform: uppercase; font-size: 12px; letter-spacing: 1px;
+        }
+        
+        .agent-row { 
+            border-bottom: 1px solid #222; padding: 15px 0; 
+            display: flex; justify-content: space-between; align-items: center; 
+        }
+        .agent-info { flex: 1; }
+        .agent-name { font-weight: bold; color: #fff; display: block; font-size: 15px; }
+        .agent-role { font-size: 11px; color: #666; margin-top: 4px; display: block; }
+        .status-dot { display: inline-block; width: 6px; height: 6px; background: var(--neon); border-radius: 50%; margin-right: 8px; box-shadow: 0 0 4px var(--neon); }
+        
+        .chat-btn { 
+            background: transparent; border: 1px solid var(--neon); color: var(--neon); 
+            padding: 6px 12px; border-radius: 2px; font-size: 10px; font-weight: bold; letter-spacing: 1px;
+        }
+        .chat-btn:active { background: var(--neon); color: #000; }
+
+        /* Chat Overlay */
+        #chat-interface { display: none; position: fixed; bottom: 0; left: 0; width: 100%; height: 70%; background: #111; border-top: 2px solid var(--neon); padding: 20px; box-sizing: border-box; z-index: 2000; box-shadow: 0 -5px 20px rgba(0,0,0,0.8); transition: transform 0.3s ease; }
+        .chat-header { color: var(--neon); font-weight: bold; border-bottom: 1px solid #333; padding-bottom: 10px; margin-bottom: 10px; display: flex; justify-content: space-between; }
+        #chat-log { height: calc(100% - 100px); overflow-y: auto; margin-bottom: 10px; color: #ccc; font-size: 13px; line-height: 1.4; }
+        .chat-input-area { display: flex; gap: 10px; }
+        #chat-input { flex: 1; background: #222; border: 1px solid #444; color: white; padding: 10px; border-radius: 4px; font-family: monospace; }
+        #send-btn { background: var(--neon); color: black; border: none; padding: 10px 20px; font-weight: bold; border-radius: 4px; }
+        
+        .msg-user { color: #58a6ff; margin-bottom: 5px; text-align: right; }
+        .msg-agent { color: var(--neon); margin-bottom: 10px; }
+        .close-chat { color: #666; cursor: pointer; }
+    </style>
+</head>
+<body>
+
+    <div id="main-view">
+        <h1>Mission Control</h1>
+        <div class="status">SECURE CONNECTION ESTABLISHED</div>
+        
+        <!-- Omni-Input -->
+        <div style="margin-bottom: 20px; text-align: center;">
+            <input type="text" id="omni-input" placeholder="Enter Request (e.g. 'My knee hurts' or 'Fix sink')" 
+                   style="width: 100%; padding: 15px; background: #111; border: 1px solid var(--neon); color: white; border-radius: 4px; font-family: monospace; box-sizing: border-box;">
+            <button onclick="smartRoute()" style="width: 100%; margin-top: 10px; background: var(--neon); border: none; padding: 10px; font-weight: bold; cursor: pointer;">AUTO-ROUTE</button>
+        </div>
+
+        <div id="grid" class="grid"></div>
+    </div>
+
+    <div id="detail-view">
+        <div class="back-btn" onclick="closeDetail()">[ Return to Base ]</div>
+        <h2 id="detail-title" style="color: #fff; font-size: 20px; border-bottom: 1px solid #333; padding-bottom: 10px; margin-bottom: 20px;"></h2>
+        <div id="detail-list"></div>
+    </div>
+
+    <div id="chat-interface">
+        <div class="chat-header">
+            <span id="chat-agent-name">AGENT</span>
+            <span class="close-chat" onclick="closeChat()">[X]</span>
+        </div>
+        <div id="chat-log"></div>
+        <div class="chat-input-area">
+            <label for="file-upload" class="chat-btn" style="cursor: pointer; display: flex; align-items: center;">📎</label>
+            <input type="file" id="file-upload" style="display: none;" onchange="uploadFile()">
+            <input type="text" id="chat-input" placeholder="Enter command..." />
+            <button id="send-btn" onclick="sendMessage()">SEND</button>
+        </div>
+    </div>
+
+    <script>
+        const API_URL = "https://flashers-auditor-violation-disciplinary.trycloudflare.com";
+        const API_KEY = "mission-control-alpha";
+        let currentAgentId = null;
+
+        async function uploadFile() {
+            const fileInput = document.getElementById('file-upload');
+            const file = fileInput.files[0];
+            if (!file) return;
+
+            const log = document.getElementById('chat-log');
+            log.innerHTML += `<div class="msg-user">>> Uploading: ${file.name}...</div>`;
+
+            const formData = new FormData();
+            formData.append('file', file);
+            formData.append('key', API_KEY);
+            formData.append('agentId', currentAgentId);
+
+            try {
+                const res = await fetch(`${API_URL}/upload`, {
+                    method: 'POST',
+                    body: formData
+                });
+                const data = await res.json();
+                log.innerHTML += `<div class="msg-agent">File received at HQ. Path: ${data.path}</div>`;
+            } catch (e) {
+                log.innerHTML += `<div class="msg-agent" style="color:red">UPLOAD FAILED</div>`;
+            }
+        }
+
+        const SQUADS = [
+            { id: 'life', name: 'LIFE OPS', icon: '🏥', desc: 'Health, Home & Logistics', agents: [ {n:'Doctor',r:'Medical Diagnostics'}, {n:'Vet',r:'Catahoula Specialist'}, {n:'Chef',r:'Nutrition & Fuel'}, {n:'Mental Health',r:'Psychology'}, {n:'Organizer',r:'Logistics'} ] },
+            { id: 'trades', name: 'TRADES', icon: '🏗️', desc: 'Physical Construction', agents: [ {n:'Mason',r:'Stone & Brick'}, {n:'Electrician',r:'High Voltage'}, {n:'Plumber',r:'Systems'}, {n:'Mechanic',r:'Transport'}, {n:'Welder',r:'Fabrication'} ] },
+            { id: 'cyber', name: 'CYBER', icon: '💻', desc: 'Digital Dominance', agents: [ {n:'Black Hat',r:'Offense/Intel'}, {n:'Cyber Sec',r:'Defense'}, {n:'Coder',r:'Automation'}, {n:'AI Specialist',r:'Intelligence'} ] },
+            { id: 'wealth', name: 'WEALTH', icon: '💰', desc: 'Empire Building', agents: [ {n:'Revenue Officer',r:'Cash Flow'}, {n:'Realtor',r:'Assets'}, {n:'Legal Eagle',r:'Defense'}, {n:'Trend Spotter',r:'Market Opportunities'} ] },
+            { id: 'mystic', name: 'MYSTIC', icon: '🔮', desc: 'Esoteric Knowledge', agents: [ {n:'Tarot Reader',r:'Pathfinding'}, {n:'Energy Control',r:'Vibration'}, {n:'Astrologer',r:'Cosmic Alignment'} ] },
+            { id: 'nature', name: 'NATURE', icon: '🌿', desc: 'Survival & Origin', agents: [ {n:'Survivalist',r:'Off-Grid'}, {n:'Farmer',r:'Sustenance'}, {n:'Energy Eng',r:'Free Power'} ] },
+            { id: 'social', name: 'INFLUENCE', icon: '🥂', desc: 'Social Engineering', agents: [ {n:'Social Mogul',r:'Fame'}, {n:'Creative Dir',r:'Visuals'}, {n:'Relationship',r:'Dynamics'} ] },
+            { id: 'intel', name: 'INTEL', icon: '🎓', desc: 'Deep Research', agents: [ {n:'Private Eye',r:'Investigation'}, {n:'Researcher',r:'Data Mining'}, {n:'Test Ace',r:'Accreditation'} ] }
+        ];
+
+        const grid = document.getElementById('grid');
+        
+        SQUADS.forEach(squad => {
+            const card = document.createElement('div');
+            card.className = 'squad-card';
+            card.onclick = () => openDetail(squad);
+            card.innerHTML = `
+                <div class="squad-header">
+                    <span class="squad-name">${squad.name}</span>
+                    <span class="squad-icon">${squad.icon}</span>
+                </div>
+                <div class="squad-desc">${squad.desc}</div>
+                <div class="agent-count">/// ${squad.agents.length} AGENTS ACTIVE</div>
+            `;
+            grid.appendChild(card);
+        });
+
+        async function smartRoute() {
+            const input = document.getElementById('omni-input').value;
+            if (!input) return;
+            
+            // Simple keyword routing for V1 (Fast & Local)
+            const map = {
+                'hurt': 'doctor', 'pain': 'doctor', 'sick': 'doctor', 'health': 'doctor',
+                'dog': 'vet', 'cat': 'vet', 'pet': 'vet', 'animal': 'vet',
+                'leak': 'plumber', 'water': 'plumber', 'pipe': 'plumber',
+                'wire': 'electrician', 'power': 'electrician', 'light': 'electrician',
+                'build': 'mason', 'wood': 'carpenter',
+                'money': 'revenueofficer', 'cash': 'revenueofficer',
+                'stock': 'trendspotter', 'market': 'trendspotter',
+                'sad': 'mentalhealth', 'depressed': 'mentalhealth', 'stress': 'mentalhealth'
+            };
+
+            let targetId = 'organizer'; // Default fallback
+            
+            // Find best match
+            for (const [key, agent] of Object.entries(map)) {
+                if (input.toLowerCase().includes(key)) {
+                    targetId = agent;
+                    break;
+                }
+            }
+
+            // Open chat with context
+            openChat(targetId.toUpperCase(), targetId);
+            
+            // Auto-send the initial message
+            setTimeout(() => {
+                document.getElementById('chat-input').value = input;
+                sendMessage();
+            }, 500);
+        }
+
+        function openDetail(squad) {
+            document.getElementById('main-view').style.display = 'none';
+            document.getElementById('detail-view').style.display = 'block';
+            document.getElementById('detail-title').innerHTML = `${squad.icon} ${squad.name}`;
+            
+            const list = document.getElementById('detail-list');
+            list.innerHTML = '';
+            squad.agents.forEach(agent => {
+                const row = document.createElement('div');
+                row.className = 'agent-row';
+                row.innerHTML = `
+                    <div class="agent-info">
+                        <span class="agent-name"><span class="status-dot"></span>${agent.n}</span>
+                        <span class="agent-role">${agent.r}</span>
+                    </div>
+                    <button class="chat-btn" onclick="openChat('${agent.n.toUpperCase()}', '${agent.n.toLowerCase().replace(/ /g, '')}')">LINK</button>
+                `;
+                list.appendChild(row);
+            });
+        }
+
+        function closeDetail() {
+            document.getElementById('main-view').style.display = 'block';
+            document.getElementById('detail-view').style.display = 'none';
+        }
+
+        function openChat(name, id) {
+            currentAgentId = id;
+            document.getElementById('chat-agent-name').innerText = name + " // ONLINE";
+            document.getElementById('chat-interface').style.display = 'block';
+            document.getElementById('chat-log').innerHTML = '<div class="msg-agent">Connection established. Awaiting orders.</div>';
+        }
+
+        function closeChat() {
+            document.getElementById('chat-interface').style.display = 'none';
+        }
+
+        async function sendMessage() {
+            const input = document.getElementById('chat-input');
+            const msg = input.value;
+            if (!msg) return;
+
+            const log = document.getElementById('chat-log');
+            log.innerHTML += `<div class="msg-user">>> ${msg}</div>`;
+            input.value = '';
+
+            try {
+                const response = await fetch(`${API_URL}/chat`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ key: API_KEY, agentId: currentAgentId, message: msg })
+                });
+
+                const reader = response.body.getReader();
+                const decoder = new TextDecoder();
+
+                while (true) {
+                    const { done, value } = await reader.read();
+                    if (done) break;
+                    
+                    const chunk = decoder.decode(value);
+                    const lines = chunk.split('\n\n');
+                    
+                    lines.forEach(line => {
+                        if (line.startsWith('data: ')) {
+                            const json = JSON.parse(line.substring(6));
+                            if (json.type === 'log') {
+                                log.innerHTML += `<div class="msg-agent" style="color: #888; font-size: 10px;">${json.content}</div>`;
+                            } else if (json.type === 'done') {
+                                log.innerHTML += `<div class="msg-agent" style="color: var(--neon);">[COMPLETE]</div>`;
+                            }
+                        }
+                    });
+                    log.scrollTop = log.scrollHeight;
+                }
+            } catch (e) {
+                log.innerHTML += `<div class="msg-agent" style="color:red">CONNECTION ERROR</div>`;
+            }
+        }
+    </script>
+
+</body>
+</html>
