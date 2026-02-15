@@ -120,7 +120,7 @@
     </div>
 
     <script>
-        const API_URL = "https://flashers-auditor-violation-disciplinary.trycloudflare.com";
+        const API_URL = "https://versus-peoples-lexington-timber.trycloudflare.com";
         const API_KEY = "mission-control-alpha";
         let currentAgentId = null;
 
@@ -250,48 +250,50 @@
             document.getElementById('chat-interface').style.display = 'none';
         }
 
+        let lastMsgTime = 0;
+
         async function sendMessage() {
             const input = document.getElementById('chat-input');
             const msg = input.value;
             if (!msg) return;
 
+            // Optimistic UI
             const log = document.getElementById('chat-log');
             log.innerHTML += `<div class="msg-user">>> ${msg}</div>`;
             input.value = '';
 
             try {
-                const response = await fetch(`${API_URL}/chat`, {
+                await fetch(`${API_URL}/chat`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ key: API_KEY, agentId: currentAgentId, message: msg })
                 });
-
-                const reader = response.body.getReader();
-                const decoder = new TextDecoder();
-
-                while (true) {
-                    const { done, value } = await reader.read();
-                    if (done) break;
-                    
-                    const chunk = decoder.decode(value);
-                    const lines = chunk.split('\n\n');
-                    
-                    lines.forEach(line => {
-                        if (line.startsWith('data: ')) {
-                            const json = JSON.parse(line.substring(6));
-                            if (json.type === 'log') {
-                                log.innerHTML += `<div class="msg-agent" style="color: #888; font-size: 10px;">${json.content}</div>`;
-                            } else if (json.type === 'done') {
-                                log.innerHTML += `<div class="msg-agent" style="color: var(--neon);">[COMPLETE]</div>`;
-                            }
-                        }
-                    });
-                    log.scrollTop = log.scrollHeight;
-                }
             } catch (e) {
-                log.innerHTML += `<div class="msg-agent" style="color:red">CONNECTION ERROR</div>`;
+                log.innerHTML += `<div class="msg-agent" style="color:red">SEND ERROR (Retrying...)</div>`;
             }
         }
+
+        // Polling Loop
+        setInterval(async () => {
+            if (!currentAgentId) return;
+            try {
+                const res = await fetch(`${API_URL}/poll`);
+                const messages = await res.json();
+                
+                const log = document.getElementById('chat-log');
+                messages.forEach(m => {
+                    if (m.timestamp > lastMsgTime) {
+                        if (m.type === 'agent') {
+                            log.innerHTML += `<div class="msg-agent">${m.content}</div>`;
+                        } else if (m.type === 'system') {
+                            log.innerHTML += `<div class="msg-agent" style="color:yellow">[SYS] ${m.content}</div>`;
+                        }
+                        lastMsgTime = m.timestamp;
+                        log.scrollTop = log.scrollHeight;
+                    }
+                });
+            } catch (e) { console.log("Polling..."); }
+        }, 2000);
     </script>
 
 </body>
