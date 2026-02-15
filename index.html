@@ -112,15 +112,42 @@
         </div>
         <div id="chat-log"></div>
         <div class="chat-input-area">
+            <label for="file-upload" class="chat-btn" style="cursor: pointer; display: flex; align-items: center;">📎</label>
+            <input type="file" id="file-upload" style="display: none;" onchange="uploadFile()">
             <input type="text" id="chat-input" placeholder="Enter command..." />
             <button id="send-btn" onclick="sendMessage()">SEND</button>
         </div>
     </div>
 
     <script>
-        const API_URL = "https://memories-ict-largest-soil.trycloudflare.com";
+        const API_URL = "https://flashers-auditor-violation-disciplinary.trycloudflare.com";
         const API_KEY = "mission-control-alpha";
         let currentAgentId = null;
+
+        async function uploadFile() {
+            const fileInput = document.getElementById('file-upload');
+            const file = fileInput.files[0];
+            if (!file) return;
+
+            const log = document.getElementById('chat-log');
+            log.innerHTML += `<div class="msg-user">>> Uploading: ${file.name}...</div>`;
+
+            const formData = new FormData();
+            formData.append('file', file);
+            formData.append('key', API_KEY);
+            formData.append('agentId', currentAgentId);
+
+            try {
+                const res = await fetch(`${API_URL}/upload`, {
+                    method: 'POST',
+                    body: formData
+                });
+                const data = await res.json();
+                log.innerHTML += `<div class="msg-agent">File received at HQ. Path: ${data.path}</div>`;
+            } catch (e) {
+                log.innerHTML += `<div class="msg-agent" style="color:red">UPLOAD FAILED</div>`;
+            }
+        }
 
         const SQUADS = [
             { id: 'life', name: 'LIFE OPS', icon: '🏥', desc: 'Health, Home & Logistics', agents: [ {n:'Doctor',r:'Medical Diagnostics'}, {n:'Vet',r:'Catahoula Specialist'}, {n:'Chef',r:'Nutrition & Fuel'}, {n:'Mental Health',r:'Psychology'}, {n:'Organizer',r:'Logistics'} ] },
