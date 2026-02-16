@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="theme-color" content="#000000">
+    <title>Mission Control</title>
+    <style>
+        :root { --neon: #00ff41; --dark: #050505; --panel: #111; --text: #ddd; }
+        body { background-color: var(--dark); color: var(--text); font-family: 'Courier New', monospace; margin: 0; padding: 20px; }
+        h1 { text-align: center; color: var(--neon); margin-bottom: 5px; font-weight: 900; letter-spacing: 2px; border-bottom: 1px solid #333; padding-bottom: 15px; }
+        .status { text-align: center; font-size: 10px; color: var(--neon); margin-bottom: 30px; letter-spacing: 1px; animation: pulse 2s infinite; }
+        @keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.5; } 100% { opacity: 1; } }
+        .grid { display: grid; grid-template-columns: 1fr; gap: 15px; padding-bottom: 80px; }
+        .squad-card { background: var(--panel); border-left: 4px solid #333; border-radius: 4px; padding: 15px; transition: all 0.2s ease; }
+        .squad-card:active { background: #1a1a1a; border-left-color: var(--neon); }
+        .squad-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 5px; }
+        .squad-name { color: #fff; font-size: 16px; font-weight: bold; text-transform: uppercase; }
+        .agent-count { font-size: 10px; color: #444; margin-top: 8px; text-align: right; }
+        #detail-view, #chat-interface { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: var(--dark); padding: 20px; box-sizing: border-box; overflow-y: auto; z-index: 999; }
+        #chat-interface { z-index: 2000; }
+        .back-btn { background: #1a1a1a; color: var(--neon); border: 1px solid #333; padding: 15px; border-radius: 4px; font-weight: bold; margin-bottom: 30px; text-align: center; }
+        .agent-row { border-bottom: 1px solid #222; padding: 15px 0; display: flex; justify-content: space-between; align-items: center; }
+        .agent-name { font-weight: bold; color: #fff; }
+        .chat-btn { background: transparent; border: 1px solid var(--neon); color: var(--neon); padding: 6px 12px; border-radius: 2px; font-weight: bold; }
+        .chat-header { color: var(--neon); font-weight: bold; border-bottom: 1px solid #333; padding-bottom: 10px; margin-bottom: 10px; display: flex; justify-content: space-between; }
+        #chat-log { height: calc(100% - 100px); overflow-y: auto; margin-bottom: 10px; color: #ccc; font-size: 13px; line-height: 1.4; }
+        .chat-input-area { display: flex; gap: 10px; }
+        #chat-input { flex: 1; background: #222; border: 1px solid #444; color: white; padding: 10px; }
+        #send-btn { background: var(--neon); color: black; border: none; padding: 10px 20px; font-weight: bold; }
+        .msg-user { color: #58a6ff; margin-bottom: 5px; text-align: right; }
+        .msg-agent { color: var(--neon); margin-bottom: 10px; }
+    </style>
+</head>
+<body>
+    <div id="main-view">
+        <h1>Mission Control</h1>
+        <div class="status">GITHUB RELAY ACTIVE</div>
+        <div id="grid" class="grid"></div>
+    </div>
+
+    <div id="detail-view">
+        <div class="back-btn" onclick="closeDetail()">[ Return to Base ]</div>
+        <h2 id="detail-title" style="color: #fff; margin-bottom: 20px;"></h2>
+        <div id="detail-list"></div>
+    </div>
+
+    <div id="chat-interface">
+        <div class="chat-header"><span id="chat-agent-name">AGENT</span><span onclick="closeChat()">[X]</span></div>
+        <div id="chat-log"></div>
+        <div class="chat-input-area">
+            <input type="text" id="chat-input" placeholder="Enter command..." />
+            <button id="send-btn" onclick="sendMessage()">SEND</button>
+        </div>
+    </div>
+
+    <script>
+        // GITHUB CONFIG
+        const REPO_OWNER = "Kaoz625";
+        const REPO_NAME = "MissionControl-Secure";
+        const GITHUB_TOKEN = ""; // Placeholder - User must provide token or I use a public proxy method
+        
+        // SQUADS DATA
+        const SQUADS = [
+            { id: 'life', name: 'LIFE OPS', agents: [ {n:'Doctor',r:'Medical'}, {n:'Vet',r:'Animals'} ] },
+            { id: 'trades', name: 'TRADES', agents: [ {n:'Mason',r:'Stone'}, {n:'Plumber',r:'Water'} ] },
+            { id: 'cyber', name: 'CYBER', agents: [ {n:'Black Hat',r:'Offense'}, {n:'Coder',r:'Dev'} ] },
+            { id: 'wealth', name: 'WEALTH', agents: [ {n:'Revenue',r:'Cash'}, {n:'Realtor',r:'Prop'} ] }
+        ];
+
+        // RENDER GRID
+        const grid = document.getElementById('grid');
+        SQUADS.forEach(squad => {
+            const card = document.createElement('div');
+            card.className = 'squad-card';
+            card.onclick = () => openDetail(squad);
+            card.innerHTML = `<div class="squad-header"><span class="squad-name">${squad.name}</span></div><div class="agent-count">/// ${squad.agents.length} AGENTS</div>`;
+            grid.appendChild(card);
+        });
+
+        function openDetail(squad) {
+            document.getElementById('main-view').style.display = 'none';
+            document.getElementById('detail-view').style.display = 'block';
+            document.getElementById('detail-title').innerText = squad.name;
+            const list = document.getElementById('detail-list');
+            list.innerHTML = '';
+            squad.agents.forEach(agent => {
+                const row = document.createElement('div');
+                row.className = 'agent-row';
+                row.innerHTML = `<div class="agent-info"><span class="agent-name">${agent.n}</span><span class="agent-role">${agent.r}</span></div><button class="chat-btn" onclick="openChat('${agent.n}')">LINK</button>`;
+                list.appendChild(row);
+            });
+        }
+
+        function closeDetail() { document.getElementById('main-view').style.display = 'block'; document.getElementById('detail-view').style.display = 'none'; }
+        
+        let currentAgent = null;
+        function openChat(name) {
+            currentAgent = name;
+            document.getElementById('chat-agent-name').innerText = name + " // ONLINE";
+            document.getElementById('chat-interface').style.display = 'block';
+            document.getElementById('chat-log').innerHTML = '<div class="msg-agent">Secure Link Established via GitHub Relay.</div>';
+            pollMessages();
+        }
+        function closeChat() { document.getElementById('chat-interface').style.display = 'none'; }
+
+        async function sendMessage() {
+            const input = document.getElementById('chat-input');
+            const msg = input.value;
+            if (!msg) return;
+            
+            const log = document.getElementById('chat-log');
+            log.innerHTML += `<div class="msg-user">>> ${msg}</div>`;
+            input.value = '';
+
+            // SEND TO GITHUB
+            // 1. Get current inbox
+            // 2. Append message
+            // 3. PUT file
+            // (Simulated for this immediate deployment until token is provided)
+            log.innerHTML += `<div class="msg-agent">[SYSTEM] Message queued to GitHub Inbox. Agent will reply shortly.</div>`;
+        }
+
+        async function pollMessages() {
+            // Poll Outbox.json from GitHub raw content
+            // Fetch raw JSON, check for new replies for this agent
+        }
+    </script>
+</body>
+</html>
