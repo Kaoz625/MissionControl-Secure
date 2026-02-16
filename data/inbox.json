@@ -4,5 +4,11 @@
     "agentId": "doctor",
     "content": "I have a headache ",
     "timestamp": 1771206063670
+  },
+  {
+    "id": "1771229049738",
+    "agentId": "revenue",
+    "content": "Status",
+    "timestamp": 1771229049738
   }
 ]
