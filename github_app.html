@@ -35,7 +35,7 @@
 <body>
     <div id="main-view">
         <h1>Mission Control</h1>
-        <div class="status">GITHUB RELAY ACTIVE</div>
+        <div class="status">DIRECT LINK ESTABLISHED</div>
         <div id="grid" class="grid"></div>
     </div>
 
@@ -55,10 +55,7 @@
     </div>
 
     <script>
-        // GITHUB CONFIG
-        const REPO_OWNER = "Kaoz625";
-        const REPO_NAME = "MissionControl-Secure";
-        const GITHUB_TOKEN = ""; // Placeholder - User must provide token or I use a public proxy method
+        const GEMINI_KEY = "AIzaSyD4Cbm2j7VPQpljiNv51zzlQ9BGrvjWiY4";
         
         // SQUADS DATA
         const SQUADS = [
@@ -67,6 +64,13 @@
             { id: 'cyber', name: 'CYBER', agents: [ {n:'Black Hat',r:'Offense'}, {n:'Coder',r:'Dev'} ] },
             { id: 'wealth', name: 'WEALTH', agents: [ {n:'Revenue',r:'Cash'}, {n:'Realtor',r:'Prop'} ] }
         ];
+
+        // SOULS
+        const SOULS = {
+            'Doctor': "You are an expert Doctor. Diagnose concisely.",
+            'Vet': "You are an expert Vet for Catahoula dogs. Be helpful.",
+            'Revenue': "You are a Chief Revenue Officer. Focus on making money now."
+        };
 
         // RENDER GRID
         const grid = document.getElementById('grid');
@@ -99,8 +103,7 @@
             currentAgent = name;
             document.getElementById('chat-agent-name').innerText = name + " // ONLINE";
             document.getElementById('chat-interface').style.display = 'block';
-            document.getElementById('chat-log').innerHTML = '<div class="msg-agent">Secure Link Established via GitHub Relay.</div>';
-            pollMessages();
+            document.getElementById('chat-log').innerHTML = '<div class="msg-agent">Direct Neural Link Established.</div>';
         }
         function closeChat() { document.getElementById('chat-interface').style.display = 'none'; }
 
@@ -113,17 +116,22 @@
             log.innerHTML += `<div class="msg-user">>> ${msg}</div>`;
             input.value = '';
 
-            // SEND TO GITHUB
-            // 1. Get current inbox
-            // 2. Append message
-            // 3. PUT file
-            // (Simulated for this immediate deployment until token is provided)
-            log.innerHTML += `<div class="msg-agent">[SYSTEM] Message queued to GitHub Inbox. Agent will reply shortly.</div>`;
-        }
-
-        async function pollMessages() {
-            // Poll Outbox.json from GitHub raw content
-            // Fetch raw JSON, check for new replies for this agent
+            const systemPrompt = SOULS[currentAgent] || "You are a helpful AI assistant.";
+            
+            // DIRECT GEMINI CALL
+            try {
+                const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${GEMINI_KEY}`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ contents: [{ parts: [{ text: systemPrompt + "\n\nUser: " + msg }] }] })
+                });
+                const data = await res.json();
+                const reply = data.candidates[0].content.parts[0].text;
+                log.innerHTML += `<div class="msg-agent">${reply}</div>`;
+                log.scrollTop = log.scrollHeight;
+            } catch (e) {
+                log.innerHTML += `<div class="msg-agent" style="color:red">NEURAL FAILURE: ${e}</div>`;
+            }
         }
     </script>
 </body>

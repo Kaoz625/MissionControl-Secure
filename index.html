@@ -120,7 +120,7 @@
     </div>
 
     <script>
-        const API_URL = "https://kick-boating-trends-displayed.trycloudflare.com";
+        const API_URL = "https://mission.nyctailblazers.com";
         const API_KEY = "mission-control-alpha";
         let currentAgentId = null;
 
@@ -238,20 +238,12 @@
             input.value = '';
 
             try {
-                // Attempt standard POST
-                await fetch(`${API_URL}/chat`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ key: API_KEY, agentId: currentAgentId, message: msg })
-                });
-            } catch (e) {
-                console.error(e);
-                // Fallback: Beacon API (Fire and forget, ignores CORS)
+                // Use Beacon for guaranteed send
                 const payload = JSON.stringify({ key: API_KEY, agentId: currentAgentId, message: msg });
                 const blob = new Blob([payload], { type: 'application/json' });
                 navigator.sendBeacon(`${API_URL}/chat`, blob);
-                
-                log.innerHTML += `<div class="msg-agent" style="color:yellow">Sent via Beacon (Bypassing Lock)...</div>`;
+            } catch (e) {
+                log.innerHTML += `<div class="msg-agent" style="color:red">SEND ERROR (Retrying...)</div>`;
             }
         }
 
