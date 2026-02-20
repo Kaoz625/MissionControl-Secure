@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Universal Intel Engine</title>
+    <style>
+        body { background: #0d1117; color: #c9d1d9; font-family: monospace; padding: 20px; }
+        input { width: 100%; padding: 15px; background: #161b22; border: 1px solid #30363d; color: white; font-size: 16px; box-sizing: border-box; }
+        .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px; margin-top: 20px; }
+        .card { background: #161b22; border: 1px solid #30363d; padding: 15px; border-radius: 8px; }
+        .video-frame { width: 100%; aspect-ratio: 16/9; margin-top: 10px; }
+        .btn { background: #238636; color: white; border: none; padding: 5px 10px; cursor: pointer; margin-top: 10px; width: 100%; }
+        .tab-bar { display: flex; gap: 10px; margin-bottom: 10px; }
+        .tab { padding: 10px; cursor: pointer; border-bottom: 2px solid transparent; }
+        .tab.active { border-color: #238636; color: white; }
+    </style>
+</head>
+<body>
+    <h1>🦅 UNIVERSAL INTEL</h1>
+    
+    <div class="tab-bar">
+        <div class="tab active" onclick="setMode('clawhub')">CLAW HUB</div>
+        <div class="tab" onclick="setMode('web')">WEB SEARCH</div>
+        <div class="tab" onclick="setMode('reddit')">REDDIT</div>
+    </div>
+
+    <input type="text" id="query" placeholder="Enter keyword or URL..." onkeypress="if(event.key === 'Enter') search()">
+
+    <div id="results" class="grid"></div>
+
+    <script>
+        let mode = 'clawhub';
+        
+        function setMode(m) {
+            mode = m;
+            document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+            event.target.classList.add('active');
+        }
+
+        async function search() {
+            const q = document.getElementById('query').value;
+            const container = document.getElementById('results');
+            container.innerHTML = '<div>Scanning...</div>';
+
+            // MOCK DATA FOR DEMO (Real backend hookup is next)
+            // In V2 we connect this to intel_core.py via Relay
+            
+            let data = [];
+            if (mode === 'clawhub') {
+                data = [
+                    { title: "Finance Tracker", desc: "Tracks bank APIs.", video: "https://www.youtube.com/embed/dQw4w9WgXcQ" },
+                    { title: "Social Poster", desc: "Auto-posts to X/LinkedIn.", video: "" }
+                ];
+            } else {
+                data = [
+                    { title: "Search Result 1", desc: "Found on the web.", video: "" }
+                ];
+            }
+
+            container.innerHTML = data.map(item => `
+                <div class="card">
+                    <h3>${item.title}</h3>
+                    <p>${item.desc}</p>
+                    ${item.video ? `<iframe class="video-frame" src="${item.video}" frameborder="0" allowfullscreen></iframe>` : ''}
+                    <button class="btn" onclick="alert('Sandbox Request Sent')">TEST IN SANDBOX 📦</button>
+                </div>
+            `).join('');
+        }
+    </script>
+</body>
+</html>
